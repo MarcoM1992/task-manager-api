@@ -15,7 +15,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
@@ -38,11 +37,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = null;
 
         try {
+            // Extract JWT from Authorization header
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 jwt = authHeader.substring(7);
-                username = jwtUtil.extractUsername(jwt);
+                username = jwtUtil.extractUsername(jwt); // parse username/email from token
             }
 
+            // If user not yet authenticated, validate token and set authentication
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
@@ -54,16 +55,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     userDetails.getAuthorities()
                             );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    // Set authentication into SecurityContext for this request
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
+
+            // Continue filter chain
             filterChain.doFilter(request, response);
+
         } catch (Exception e) {
-            logger.warn("Errore durante il parsing o validazione del JWT: " + e.getMessage());
+            logger.warn("Error parsing or validating JWT: " + e.getMessage());
+
+            // Respond with 401 Unauthorized if token invalid or expired
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"Invalid or expired token\"}");
-         }
+        }
     }
-
 }

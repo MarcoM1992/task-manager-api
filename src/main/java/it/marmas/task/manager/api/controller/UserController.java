@@ -22,76 +22,141 @@ import it.marmas.task.manager.api.exceptions.ElementNotFoundException;
 import it.marmas.task.manager.api.service.UserService;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/user") // Base path for all user-related endpoints
 public class UserController {
 
-     
-	private static final Logger logger= org.slf4j.LoggerFactory.getLogger(UserController.class);
-	
-@Autowired
-private UserService userService;
+    private static final Logger logger = org.slf4j.LoggerFactory.getLogger(UserController.class);
 
-    
-	@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-	@GetMapping("/getUser")
- 	public ResponseEntity<?> getUser(@RequestParam int id,Authentication authentication) {
-		try {
-		return ResponseEntity.ok(userService.getUserById(id,authentication.getName(),authentication.getAuthorities().stream().map(x->x.getAuthority()).toList()));
-		}catch(Exception e){
-			logger.warn(e.getMessage());
-		return	ResponseEntity.badRequest().body(e.getMessage());
-		}
-		
-	}	
-	@PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/update")
-    public ResponseEntity<?>update(@RequestBody UserDto userDto,Authentication authentication){
-    	try {
-    		return ResponseEntity.ok(userService.updateUser(userDto,authentication.getName(),authentication.getAuthorities().stream().map(x->x.getAuthority()).collect(Collectors.toList())));
-    	}catch(Exception e) {
-    		logger.error(e.getMessage());
-    		return ResponseEntity.badRequest().body(e.getMessage());
-    	}
+    @Autowired
+    private UserService userService; // Service layer for user operations
+
+    /**
+     * Retrieve a user by ID.
+     * Accessible by USER and ADMIN roles.
+     * @param id User ID
+     * @param authentication Authentication object to get current username & authorities
+     * @return UserDto or error message
+     */
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/getUser")
+    public ResponseEntity<?> getUser(@RequestParam int id, Authentication authentication) {
+        try {
+            return ResponseEntity.ok(
+                userService.getUserById(
+                    id,
+                    authentication.getName(),
+                    authentication.getAuthorities().stream().map(x -> x.getAuthority()).toList()
+                )
+            );
+        } catch (Exception e) {
+            logger.warn(e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
-	
-	@PreAuthorize("hasRole('ADMIN')")
-	@GetMapping("/allUsers")
-	 public ResponseEntity<?>getAllUsers(){
-		try {
-			return	ResponseEntity.status(HttpStatusCode.valueOf(200)).body(userService.getAllUsers()) ;
-		}catch(ElementNotFoundException e) {
-			logger.error(e.getMessage());
-    		return ResponseEntity.badRequest().body(e.getMessage());
 
-		}
-	}
-	
-	@PreAuthorize("hasAnyRole('USER','ADMIN')")
-	@PatchMapping("/assignTask")
-	public ResponseEntity<?>assignTask(@RequestBody AssignTaskDto assignTaskDto,Authentication authentication ){
-		try {
-			return ResponseEntity.ok( userService.assignTask(assignTaskDto,authentication.getName(),authentication.getAuthorities().stream().map(x->x.getAuthority()).toList()));
-		}catch (Exception e) {
-			return ResponseEntity.badRequest().body(e.getMessage());
-		}
-		
-	}
-	@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-	@PatchMapping("/removeTask")
-	public ResponseEntity<?>removeTask(@RequestBody AssignTaskDto assignTaskDto,Authentication authentication ){
-		try {
-			return ResponseEntity.ok( userService.removeTask(assignTaskDto,authentication.getName(),authentication.getAuthorities().stream().map(x->x.getAuthority()).toList()));
-		}catch (Exception e) {
-			return ResponseEntity.badRequest().body(e.getMessage());
-		}
-	}
-	@PreAuthorize("hasAnyRole('ADMIN','USER')")
-	@GetMapping("getTaskByUser/{userId}")
-	public ResponseEntity<?>getTaskByUser(Authentication authentication,@PathVariable long userId){
-		logger.info("chiamata ricevuta");
- 	 
-			return ResponseEntity.ok(userService.getUserTasks(authentication.getName(),authentication.getAuthorities().stream().map(x->x.getAuthority()).toList(), userId));
-	
-	} 
-	
+    /**
+     * Update user information.
+     * Accessible only by ADMIN role.
+     * @param userDto Updated user data
+     * @param authentication Authentication object
+     * @return Updated user or error
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/update")
+    public ResponseEntity<?> update(@RequestBody UserDto userDto, Authentication authentication) {
+        try {
+            return ResponseEntity.ok(
+                userService.updateUser(
+                    userDto,
+                    authentication.getName(),
+                    authentication.getAuthorities().stream().map(x -> x.getAuthority()).collect(Collectors.toList())
+                )
+            );
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Retrieve all users.
+     * Accessible only by ADMIN role.
+     * @return List of all users or error
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/allUsers")
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            return ResponseEntity.status(HttpStatusCode.valueOf(200)).body(userService.getAllUsers());
+        } catch (ElementNotFoundException e) {
+            logger.error(e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Assign a task to a user.
+     * Accessible by USER and ADMIN roles.
+     * @param assignTaskDto DTO containing task and user information
+     * @param authentication Authentication object
+     * @return Updated user-task assignment or error
+     */
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @PatchMapping("/assignTask")
+    public ResponseEntity<?> assignTask(@RequestBody AssignTaskDto assignTaskDto, Authentication authentication) {
+        try {
+            return ResponseEntity.ok(
+                userService.assignTask(
+                    assignTaskDto,
+                    authentication.getName(),
+                    authentication.getAuthorities().stream().map(x -> x.getAuthority()).toList()
+                )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Remove a task from a user.
+     * Accessible by USER and ADMIN roles.
+     * @param assignTaskDto DTO containing task and user information
+     * @param authentication Authentication object
+     * @return Updated user-task removal or error
+     */
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PatchMapping("/removeTask")
+    public ResponseEntity<?> removeTask(@RequestBody AssignTaskDto assignTaskDto, Authentication authentication) {
+        try {
+            return ResponseEntity.ok(
+                userService.removeTask(
+                    assignTaskDto,
+                    authentication.getName(),
+                    authentication.getAuthorities().stream().map(x -> x.getAuthority()).toList()
+                )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Retrieve all tasks assigned to a specific user.
+     * Accessible by USER and ADMIN roles.
+     * @param authentication Authentication object
+     * @param userId ID of the user whose tasks are requested
+     * @return List of tasks or error
+     */
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @GetMapping("getTaskByUser/{userId}")
+    public ResponseEntity<?> getTaskByUser(Authentication authentication, @PathVariable long userId) {
+        logger.info("Request received to fetch tasks for user ID: " + userId);
+        return ResponseEntity.ok(
+            userService.getUserTasks(
+                authentication.getName(),
+                authentication.getAuthorities().stream().map(x -> x.getAuthority()).toList(),
+                userId
+            )
+        );
+    }
 }

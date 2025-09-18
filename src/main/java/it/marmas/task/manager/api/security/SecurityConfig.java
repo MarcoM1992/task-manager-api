@@ -21,76 +21,104 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // <-- per utilizzare @Preauthorize
+@EnableMethodSecurity // Enables @PreAuthorize and @PostAuthorize annotations in services
 public class SecurityConfig {
- 
-	@Autowired
-    private   CustomUserDetailsService userDetailsService;
 
-	
+    @Autowired
+    private CustomUserDetailsService userDetailsService; // Loads users from DB for authentication
+
+    // Constructor-based injection for clarity
     public SecurityConfig(CustomUserDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
     }
-    @Bean JwtUtil getJwtUtil() {
-    	return new JwtUtil();
+
+    /**
+     * JWT utility bean
+     * Handles generating and validating JWT tokens
+     */
+    @Bean
+    JwtUtil getJwtUtil() {
+        return new JwtUtil();
     }
 
+    /**
+     * JWT authentication filter bean
+     * Intercepts requests to validate JWT tokens
+     */
     @Bean
     JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(getJwtUtil(),userDetailsService);
+        return new JwtAuthenticationFilter(getJwtUtil(), userDetailsService);
     }
-    
-    @Bean 
-    PasswordEncoder getPasswordEncoder() {    	
-    	return new BCryptPasswordEncoder();
-    }
-    //
-    
+
+    /**
+     * Password encoder bean
+     * Uses BCrypt for secure password hashing
+     */
     @Bean
-     AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+    PasswordEncoder getPasswordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * AuthenticationManager bean
+     * Required for manual authentication (e.g., login endpoint)
+     */
+    @Bean
+    AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
-	
-	@Bean
-	  SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-		return httpSecurity.csrf(x-> x.disable())
-				.authorizeHttpRequests(auth->auth
-						.requestMatchers("/css/**", "/js/**", "/imgs/**").permitAll()
-						.requestMatchers("/auth/**").permitAll() 
- 						.requestMatchers("/user/*","/task/**").hasAnyRole("ADMIN","USER")
-						.requestMatchers("/ADMIN/*").hasRole("ADMIN")
-						 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-  						.anyRequest().authenticated()
-  						
-						)
-				//Handling role not allowed exception
-				.exceptionHandling(ex -> ex
-		                .accessDeniedHandler((request, response, accessDeniedException) -> {
-		                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-		                    response.setContentType("application/json");
-		                    response.getWriter().write("{\"error\": \"Non hai i permessi per accedere a questa risorsa." +
-		                                              " Contatta l'amministratore.\"}");
-		                    
-		                })
-		                .authenticationEntryPoint((request, response, authException) -> {
-		                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		                    response.setContentType("application/json");
-		                    response.getWriter().write("{\"error\": \"Accesso non autorizzato. Token assente o non valido.\"}");
-		                })
-		            )
-				
-				//“Non mantenere una sessione HTTP tra le richieste. Tratta ogni chiamata come indipendente, basandoti solo sul token.”
-	            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-	            
-				.addFilterBefore(jwtAuthenticationFilter() ,UsernamePasswordAuthenticationFilter.class)
-						.build();
-	}
- 
-	@Bean
-	  AuthenticationProvider authenticationProvider() {
-	    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
- 	    provider.setPasswordEncoder(getPasswordEncoder()); 
- 	    return provider;
-	}
+    /**
+     * Security filter chain configuration
+     * Defines which endpoints are public and which require authentication/roles
+     */
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        return httpSecurity
+                // Disable CSRF because this is a stateless REST API
+                .csrf(csrf -> csrf.disable())
+
+                // Configure endpoint authorization
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/css/**", "/js/**", "/imgs/**").permitAll() // Static resources open
+                        .requestMatchers("/auth/**").permitAll() // Public endpoints (login/register)
+                        .requestMatchers("/user/*", "/task/**").hasAnyRole("ADMIN", "USER") // USER or ADMIN access
+                        .requestMatchers("/ADMIN/*").hasRole("ADMIN") // ADMIN-only endpoints
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // API docs open
+                        .anyRequest().authenticated() // All other requests require authentication
+                )
+
+                // Handle unauthorized or forbidden access
+                .exceptionHandling(ex -> ex
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"You do not have permission to access this resource. " +
+                                    "Contact the administrator.\"}");
+                        })
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Unauthorized access. Missing or invalid token.\"}");
+                        })
+                )
+
+                // Use stateless session management; rely only on JWT
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Add the JWT filter before UsernamePasswordAuthenticationFilter
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .build();
+    }
+
+    /**
+     * Authentication provider bean
+     * Uses DAO-based authentication with the custom user details service and password encoder
+     */
+    @Bean
+    AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(getPasswordEncoder());
+        return provider;
+    }
 }

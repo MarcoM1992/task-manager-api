@@ -23,38 +23,56 @@ import it.marmas.task.manager.api.dto.UserDto;
 import it.marmas.task.manager.api.service.UserService;
 
 @RestController
-@RequestMapping("/ADMIN")
+@RequestMapping("/ADMIN") // Base path for all admin endpoints
 public class AdminController {
 	
+	// Logger to track warnings and other information
 	private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 	
 	@Autowired
-	private UserService userService;
+	private UserService userService; // Service to handle user-related operations
 	
+	/**
+	 * Delete a user by ID
+	 * Only accessible by users with the ADMIN role
+	 * @param id The ID of the user to delete
+	 * @return ResponseEntity with success or error message
+	 */
 	@DeleteMapping("/delete")
-	@PreAuthorize("harRole('ADMIN')")
-	public ResponseEntity<?>delete(@RequestParam int id ){
+	@PreAuthorize("harRole('ADMIN')") // Only admins can access this endpoint
+	public ResponseEntity<?> delete(@RequestParam int id) {
 		try {
-		UserDto u=userService.deleteUser(id);
-		return ResponseEntity.status(200).body("utente eliminato con successo : "+u );
-		}catch(Exception e) {
+			// Call service to delete the user and get a UserDto in response
+			UserDto u = userService.deleteUser(id);
+			return ResponseEntity.status(200).body("User successfully deleted: " + u);
+		} catch (Exception e) {
+			// Log warning and return a 400 Bad Request with error message
 			logger.warn(e.getMessage());
-			return ResponseEntity.badRequest().body("you couldn't delete the User "+e.getMessage());
+			return ResponseEntity.badRequest().body("You couldn't delete the user: " + e.getMessage());
 		}
-	// crea Dto e fai ritornare UserDto invece di user ai metodi del service
-	
+		// Note: It is recommended to return UserDto instead of the entity in service methods
 	}
 	
+	/**
+	 * Debug endpoint to inspect current authentication details
+	 * Useful for checking the logged-in user's username, authorities, and authentication status
+	 * @return ResponseEntity containing authentication information or message if none
+	 */
 	@GetMapping("/debug-auth")
 	public ResponseEntity<?> debugAuth() {
+	    // Retrieve the current authentication from the security context
 	    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+	    
 	    if (auth == null) {
-	        return ResponseEntity.ok("Nessuna autenticazione presente");
+	        return ResponseEntity.ok("No authentication present");
 	    }
+	    
+	    // Extract authentication details
 	    String username = auth.getName();
 	    boolean authenticated = auth.isAuthenticated();
 	    Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
 
+	    // Build a map with relevant authentication info
 	    Map<String, Object> info = new HashMap<>();
 	    info.put("username", username);
 	    info.put("authenticated", authenticated);
@@ -64,7 +82,4 @@ public class AdminController {
 
 	    return ResponseEntity.ok(info);
 	}
-	
-	
-	
 }

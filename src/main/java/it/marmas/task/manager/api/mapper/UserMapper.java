@@ -27,61 +27,56 @@ private static final Logger logger= LoggerFactory.getLogger(UserMapper.class);
     
 
 	@Override
-	public   UserDto toDto(User entity) {
-		Set<Task> tasks = entity.getTasks();
-		String imagePath=entity.getImagePath();
-		Instant createdAt= entity.getCreatedAt();
-		LocalDateTime localDate=null;
-		String timezone=entity.getTimezone();
-	    if(createdAt!=null&&timezone!=null) {
-	    	ZoneId zone= ZoneId.of(timezone);
-		localDate=Utility.instantToLocalDateTime(createdAt,zone);
+	public UserDto toDto(User entity) {
+	    Set<Task> tasks = entity.getTasks();
+	    String imagePath = entity.getImagePath();
+	    Instant createdAt = entity.getCreatedAt();
+	    LocalDateTime localDate = null;
+	    String timezone = entity.getTimezone();
+	    
+	    // Convert UTC createdAt to user's local timezone
+	    if (createdAt != null && timezone != null) {
+	        ZoneId zone = ZoneId.of(timezone);
+	        localDate = Utility.instantToLocalDateTime(createdAt, zone);
 	    }
-		UserDto userDto= new UserDto(
-				entity.getId(),
-				entity.getUsername(),
-				entity.getRoles()!=null?entity.getRoles().stream().map(role -> role.getName()).collect(Collectors.toList()):null,
-				entity.isEnabled(),
-				localDate,
-				entity.getEmail(),
-				entity.getPassword(),
-				tasks==null?null:entity.getTasks().stream().map( taskMapper::toDto).toList(),
-				imagePath==null?"user.jpg":imagePath,
-				entity.getTimezone()
- 				);
- 		return userDto;
+
+	    UserDto userDto = new UserDto(
+	        entity.getId(),
+	        entity.getUsername(),
+	        entity.getRoles() != null 
+	            ? entity.getRoles().stream().map(role -> role.getName()).collect(Collectors.toList())
+	            : null,
+	        entity.isEnabled(),
+	        localDate,
+	        entity.getEmail(),
+	        entity.getPassword(),
+	        tasks == null ? null : entity.getTasks().stream().map(taskMapper::toDto).toList(),
+	        imagePath == null ? "user.jpg" : imagePath, // default image
+	        entity.getTimezone()
+	    );
+	    return userDto;
 	}
 
 	@Override
-	public   User toEntity(UserDto dto) {
- 		 User u= new User();
-		 if(dto.getUsername()!=null) {
-		 u.setUsername(dto.getUsername());
-		 }
-		 if(dto.getCreatedAt()!=null&&dto.getTimezone()!=null) {
-		 
-		 u.setCreatedAt(Utility.localDateTimeToInstant(dto.getCreatedAt(), dto.getTimezone()));
-		 logger.info("la data di creazione utente è "+Utility.formatLdl(u.getCreatedAt()) );
-		 }
-		 if(dto.getEmail()!=null) {
-		 u.setEmail(dto.getEmail());
-		 }
-		 if(dto.getPassword()!=null) {
-		 u.setPassword(dto.getPassword());
-		 }
-		 if(dto.getTasks()!=null) {
-		 Set<Task> tasks= dto.getTasks().stream().map(taskMapper::toEntity).collect(Collectors.toSet());
-         u.setTasks(tasks);		 
-		 }
-		 if(dto.getImagePath()!=null) {
-			 u.setImagePath(dto.getImagePath());
-		 }
-		 if(dto.getTimezone()!=null) {
-			 u.setTimezone(dto.getTimezone());
-		 }
-		 
-	 
-		 return u;
-  	}
+	public User toEntity(UserDto dto) {
+	    User u = new User();
+	    if (dto.getUsername() != null) {
+	        u.setUsername(dto.getUsername());
+	    }
+	    // Convert user's local datetime back to UTC Instant
+	    if (dto.getCreatedAt() != null && dto.getTimezone() != null) {
+	        u.setCreatedAt(Utility.localDateTimeToInstant(dto.getCreatedAt(), dto.getTimezone()));
+	        logger.info("User creation date: " + Utility.formatLdl(u.getCreatedAt()));
+	    }
+	    if (dto.getEmail() != null) u.setEmail(dto.getEmail());
+	    if (dto.getPassword() != null) u.setPassword(dto.getPassword());
+	    if (dto.getTasks() != null) {
+	        Set<Task> tasks = dto.getTasks().stream().map(taskMapper::toEntity).collect(Collectors.toSet());
+	        u.setTasks(tasks);
+	    }
+	    if (dto.getImagePath() != null) u.setImagePath(dto.getImagePath());
+	    if (dto.getTimezone() != null) u.setTimezone(dto.getTimezone());
 
+	    return u;
+	}
 }

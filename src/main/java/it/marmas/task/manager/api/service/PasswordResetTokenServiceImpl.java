@@ -25,122 +25,143 @@ import it.marmas.task.manager.api.model.PasswordResetToken;
 import it.marmas.task.manager.api.model.User;
 import it.marmas.task.manager.api.repo.PasswordResetTokenRepository; 
 
-
 @Service
-public class PasswordResetTokenServiceImpl  implements PasswordResetTokenService{
+public class PasswordResetTokenServiceImpl implements PasswordResetTokenService {
 
-	private static final Logger logger= LoggerFactory.getLogger(PasswordResetTokenServiceImpl.class);
-	@Autowired
-	private PasswordEncoder passwordEncoder;
-	
-	private String REQUEST_PASSWORD_RESET="reset_password";
- 	private static final String PURPOSE="purpose";
-	@Value("${jwt.secret}")
-	private String secretKey;
-	@Autowired
-	private UserService userService;
-  
-	@Autowired 
-	private PasswordResetTokenRepository passwordResetTokenRepo;
-	
-	@Autowired
-	@Qualifier("tokenMapper")
-	Mapper<PasswordResetToken,PasswordResetTokenDto> tokenMapper;
+    private static final Logger logger = LoggerFactory.getLogger(PasswordResetTokenServiceImpl.class);
 
-   
-	@Transactional
-	@Override
-	public String resetPassword(String newPassword, String token) {
- 		logger.info("searching if token exists: "+token);
-		PasswordResetToken resetToken =passwordResetTokenRepo.findByToken(token).orElseThrow(()-> new InvalidOneTimeTokenException("Token has not been found "));
- 		
-		logger.info("token exists");
-		
- 		
-		logger.info("checking if token is expired");
-		
-		 if(checkIfTokenExpiredOrDisabled(resetToken)) {
-				String errorMsg="this Token expired or not valid";
-				logger.error(errorMsg);
-				return errorMsg;
-		 }
-		
-		 logger.info("token not expired");
-		 
-		 logger.info("parsing claims");
-		 
-		Claims claims =Jwts.parserBuilder()
-				.setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)))
-				.build()
-				.parseClaimsJws(token)
-				.getBody();
-		
-		String purpose= claims.get(PURPOSE,String.class);
-		
-		logger.info(PURPOSE + " : "+purpose);
-		
-		logger.info("purpose is equal "+REQUEST_PASSWORD_RESET+" =="+(purpose.equals(REQUEST_PASSWORD_RESET)));
-		if(!purpose.equals(REQUEST_PASSWORD_RESET)){
-			throw new RuntimeException("Token purpose not valid");
-		}
-		
-		String email= claims.getSubject();
-		logger.info("email retrieved from claims : "+ email);
-		
-		logger.info("looking for user by email :"+email);
-		User user = userService.getUserEntityByEmail(email).orElseThrow(()->new ElementNotFoundException("User not found with this email : "+email));
-		
- 		
-		user.setPassword(passwordEncoder.encode(newPassword));
-	    
-		userService.updateUser(user);
-		logger.info("user password changed");
- 		disableToken(resetToken);
-		logger.info("token disabled ");
-		return "password changed ";
-		 
-	}
+    @Autowired
+    private PasswordEncoder passwordEncoder; // For hashing passwords
 
-	public boolean checkIfTokenExpiredOrDisabled(PasswordResetToken token) {
-		LocalDateTime tokenExpiration= token.getExpiryDate();
-		LocalDateTime currentTime=LocalDateTime.now(ZoneOffset.UTC);
-		if(tokenExpiration.isBefore(currentTime)||!token.isEnabled()) {
-		
-			disableToken(token);
-			logger.info("expired token status updated");
-			return true;
-		 
-		}
-		return false;
-		
-	}
- 	
-	private void disableToken(PasswordResetToken token) {
-		token.setEnabled(false);
-		passwordResetTokenRepo.updateToken(token);
-	}
+    private String REQUEST_PASSWORD_RESET = "reset_password"; // Expected token purpose
+    private static final String PURPOSE = "purpose"; // Claim key in JWT
 
-	@Override
-	@Transactional
-	public Optional<PasswordResetTokenDto> insertToken(PasswordResetTokenDto passwordResetTokenDto) {
-		
-		String email = passwordResetTokenDto.getEmail();
-		User u=null;
-		if(email!=null) {
-			u= userService.getUserEntityByEmail(email).orElseThrow(()->new ElementNotFoundException("user with email "+ email + " not found"));
-			logger.info("user retrieved by email :"+email+" is : "+u);
- 		}
-	
-		PasswordResetToken prt= tokenMapper.toEntity(passwordResetTokenDto) ;
-		
-		prt.setUser(u);
-		logger.info(prt+"");
-		
-		logger.info("password reset token entity created "+ prt);
-		passwordResetTokenRepo.insertToken(prt);
-		logger.info("token inserted in db");
+    @Value("${jwt.secret}")
+    private String secretKey; // Secret key used for JWT verification
 
-		return Optional.of(tokenMapper.toDto(prt));
-	}
+    @Autowired
+    private UserService userService; // Service to manage user entities
 
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepo; // Repository for password reset tokens
+
+    @Autowired
+    @Qualifier("tokenMapper")
+    Mapper<PasswordResetToken, PasswordResetTokenDto> tokenMapper; // Mapper for converting between DTOs and entities
+
+    /**
+     * Reset a user's password using a valid token.
+     * @param newPassword the new password to set
+     * @param token the one-time JWT token
+     * @return a status message indicating success or error
+     */
+    @Transactional
+    @Override
+    public String resetPassword(String newPassword, String token) {
+        logger.info("Searching if token exists: " + token);
+
+        // Retrieve token entity or throw exception if not found
+        PasswordResetToken resetToken = passwordResetTokenRepo.findByToken(token)
+                .orElseThrow(() -> new InvalidOneTimeTokenException("Token has not been found"));
+
+        logger.info("Token exists");
+
+        // Check if token is expired or disabled
+        if (checkIfTokenExpiredOrDisabled(resetToken)) {
+            String errorMsg = "This token expired or is not valid";
+            logger.error(errorMsg);
+            return errorMsg;
+        }
+
+        logger.info("Token is not expired");
+
+        // Parse JWT claims to validate token
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)))
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        String purpose = claims.get(PURPOSE, String.class);
+        logger.info(PURPOSE + " : " + purpose);
+
+        // Validate token purpose
+        if (!REQUEST_PASSWORD_RESET.equals(purpose)) {
+            throw new RuntimeException("Token purpose not valid");
+        }
+
+        String email = claims.getSubject();
+        logger.info("Email retrieved from claims: " + email);
+
+        // Retrieve the user by email
+        User user = userService.getUserEntityByEmail(email)
+                .orElseThrow(() -> new ElementNotFoundException("User not found with this email: " + email));
+
+        // Update the user's password
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userService.updateUser(user);
+        logger.info("User password changed");
+
+        // Disable the token after use
+        disableToken(resetToken);
+        logger.info("Token disabled");
+
+        return "Password changed";
+    }
+
+    /**
+     * Check if a token is expired or disabled.
+     * @param token the token to check
+     * @return true if expired or disabled, false otherwise
+     */
+    public boolean checkIfTokenExpiredOrDisabled(PasswordResetToken token) {
+        LocalDateTime tokenExpiration = token.getExpiryDate();
+        LocalDateTime currentTime = LocalDateTime.now(ZoneOffset.UTC);
+
+        if (tokenExpiration.isBefore(currentTime) || !token.isEnabled()) {
+            disableToken(token);
+            logger.info("Expired token status updated");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Disable a token to prevent future use.
+     * @param token the token to disable
+     */
+    private void disableToken(PasswordResetToken token) {
+        token.setEnabled(false);
+        passwordResetTokenRepo.updateToken(token);
+    }
+
+    /**
+     * Insert a new password reset token into the database.
+     * @param passwordResetTokenDto DTO containing token data
+     * @return Optional DTO of the inserted token
+     */
+    @Override
+    @Transactional
+    public Optional<PasswordResetTokenDto> insertToken(PasswordResetTokenDto passwordResetTokenDto) {
+        String email = passwordResetTokenDto.getEmail();
+        User u = null;
+
+        if (email != null) {
+            u = userService.getUserEntityByEmail(email)
+                    .orElseThrow(() -> new ElementNotFoundException("User with email " + email + " not found"));
+            logger.info("User retrieved by email: " + email + " is: " + u);
+        }
+
+        // Map DTO to entity
+        PasswordResetToken prt = tokenMapper.toEntity(passwordResetTokenDto);
+        prt.setUser(u);
+
+        logger.info("Password reset token entity created: " + prt);
+
+        // Insert token into DB
+        passwordResetTokenRepo.insertToken(prt);
+        logger.info("Token inserted in DB");
+
+        return Optional.of(tokenMapper.toDto(prt));
+    }
 }
