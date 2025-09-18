@@ -203,4 +203,18 @@ Open a pull request
 
 
 ---
- 
+
+## Environment Variables
+
+The application uses environment variables for sensitive information. You can set them in your OS or use a `.env` file with a tool like [dotenv](https://github.com/motdotla/dotenv).
+
+| Variable             | Description                                      |
+|----------------------|--------------------------------------------------|
+| `DB_URL`             | JDBC URL for your database (e.g., `jdbc:mysql://localhost:3306/taskdb`) |
+| `DB_USERNAME`        | Database username                                |
+| `DB_PASSWORD`        | Database password                                |
+| `SECRET_KEY`         | Secret key used for JWT token generation         |
+| `EMAIL_USERNAME`     | Username/email for sending notifications         |
+| `EMAIL_PASSWORD`     | Password for email sending account               |
+| `TIMEZONE`           | Default timezone for users (e.g., `Europe/London`) |
+

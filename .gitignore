@@ -41,3 +41,6 @@ build/
 application.properties
 application.yml
 .env
+
+### Local Properties containing password
+application-local.properties
