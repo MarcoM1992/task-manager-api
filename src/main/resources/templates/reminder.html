@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upcoming Task Reminder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: auto;
+        }
+        h2 {
+            color: #2c3e50;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+  		<h1>Hi {{username}} 👋!</h1>
+        <h2>Reminder: You have upcoming tasks!</h2>
+        <p>Here’s a quick overview of tasks that are due soon:</p>
+        <ul>
+           {{tasks}}  
+        </ul>
+        <p>Please make sure to complete them on time.</p>
+        <div class="footer">
+            This is an automated reminder. Please do not reply to this email.
+        </div>
+    </div>
+</body>
+</html>
