@@ -31,3 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Temp File DB and Log ###
+*.log
+*.db
+*.sqlite
+
+### Sensitive local properties ###
+application.properties
+application.yml
+.env
