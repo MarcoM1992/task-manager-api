@@ -142,9 +142,48 @@ Authentication
 - Role-based access:  
   - `ADMIN` → Full access  
   - `USER` → Limited access to own tasks
+---
 
-Swagger UI disponibile su:  
-`http://localhost:8080/swagger
+**API Documentation**
+
+Swagger UI is available at:  
+`http://localhost:8080/swagger-ui/index.html`
+
+This provides interactive documentation for all API endpoints, including request/response models.
+---
+
+## Curl Examples:
+# Register a new user
+curl -X POST http://localhost:8080/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"newuser","password":"password","email":"user@email.com"}'
+
+# Login (get JWT token)
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"newuser","password":"password"}'
+
+# Get user info (protected endpoint, replace <token> with your JWT)
+curl -X GET http://localhost:8080/user/me \
+  -H "Authorization: Bearer <token>"
+
+# Create a new task (protected endpoint)
+curl -X POST http://localhost:8080/task \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"My Task","description":"Details","dueDate":"2025-09-30"}'
+
+# Assign a task to a user (protected endpoint)
+curl -X POST http://localhost:8080/user/{userId}/tasks/{taskId} \
+  -H "Authorization: Bearer <token>"
+
+# Get all tasks for current user (protected endpoint)
+curl -X GET http://localhost:8080/task/my \
+  -H "Authorization: Bearer <token>"
+
+# Admin: get all users (ADMIN role required)
+curl -X GET http://localhost:8080/ADMIN/users \
+  -H "Authorization: Bearer <token>"
 
 License
 
