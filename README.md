@@ -32,7 +32,7 @@ A Spring Boot RESTful API for managing users, roles, and tasks. The API supports
 - Swagger OpenAPI 3
 - SLF4J / Logback for logging
 
----
+---  
 
 ## **Project Structure**
 src/
