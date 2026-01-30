@@ -4,9 +4,10 @@ pipeline {
         GITHUB_TOKEN = credentials('githubtoken') // solo per API o script
     }
 
+    
     tools {
         maven 'Maven-3.9'
-        jdk 'JDK-21'
+        jdk 'jdk-21.0.8'
     }
 
     stages {
