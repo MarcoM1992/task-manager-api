@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        GITHUB_TOKEN = credentials('githubToken') // solo per API o script
+        GITHUB_TOKEN = credentials('githubtoken') // solo per API o script
     }
 
     tools {
@@ -14,7 +14,7 @@ pipeline {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/MarcoM1992/task-manager-api',
-                    credentialsId: 'githubToken' // <- checkout sicuro
+                    credentialsId: 'githubtoken' // <- checkout sicuro
             }
         }
 
