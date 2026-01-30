@@ -9,7 +9,7 @@ A Spring Boot RESTful API for managing users, roles, and tasks. The API supports
 - User management
   - Register, update, delete users
   - Role assignment and management (ADMIN, USER)
-- Task management 
+- Task management  
   - Create, update, delete tasks
   - Assign tasks to users
 - JWT-based authentication and authorization
